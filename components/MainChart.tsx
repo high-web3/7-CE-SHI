@@ -192,22 +192,7 @@ export default function MainChart(props: MainChartProps) {
             timeScale: {
                 timeVisible: true,
                 secondsVisible: false,
-                rightOffset: 12, // Standard offset
-                tickMarkFormatter: (time: number, tickMarkType: number, locale: string) => {
-                    const date = new Date(time * 1000);
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = String(date.getDate()).padStart(2, '0');
-
-                    // Always return full date for date ticks
-                    if (tickMarkType < 3) {
-                        return `${year}/${month}/${day}`;
-                    }
-                    // Time format for time ticks
-                    const hour = String(date.getHours()).padStart(2, '0');
-                    const minute = String(date.getMinutes()).padStart(2, '0');
-                    return `${hour}:${minute}`;
-                }
+                rightOffset: 12
             },
             crosshair: {
                 // FORCE: Free Movement (No Magnetic Snapping)
@@ -282,9 +267,46 @@ export default function MainChart(props: MainChartProps) {
         };
     }, [updateOverlay]);
 
-    // 1.5 Update timeframeRef (keep ref in sync, but no dynamic formatter changes)
+    // 1.5 Dynamic config for weekly chart ONLY - other timeframes use default
     useEffect(() => {
+        if (!chartRef.current) return;
+
         timeframeRef.current = timeframe;
+        const isWeekly = timeframe && timeframe.toLowerCase().includes('w');
+
+        if (isWeekly) {
+            // WEEKLY ONLY: Apply special stable configuration
+            chartRef.current.applyOptions({
+                timeScale: {
+                    rightOffset: 12,
+                    barSpacing: 6,
+                    minBarSpacing: 0.5,
+                    tickMarkFormatter: (time: number, tickMarkType: number, locale: string) => {
+                        const date = new Date(time * 1000);
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        // Always full format for weekly
+                        if (tickMarkType < 3) {
+                            return `${year}/${month}/${day}`;
+                        }
+                        const hour = String(date.getHours()).padStart(2, '0');
+                        const minute = String(date.getMinutes()).padStart(2, '0');
+                        return `${hour}:${minute}`;
+                    }
+                }
+            });
+        } else {
+            // NON-WEEKLY: Reset to default configuration
+            chartRef.current.applyOptions({
+                timeScale: {
+                    rightOffset: 12,
+                    barSpacing: 6,
+                    minBarSpacing: 0.5,
+                    tickMarkFormatter: undefined as any // Reset to default formatter
+                }
+            });
+        }
     }, [timeframe]);
 
     // 2. Load Data
