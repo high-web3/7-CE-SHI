@@ -192,21 +192,18 @@ export default function MainChart(props: MainChartProps) {
             timeScale: {
                 timeVisible: true,
                 secondsVisible: false,
-                rightOffset: 200, // MASSIVE OFFSET: Ensure enough space for long date labels
-                fixRightEdge: true, // Lock right edge to prevent jumping
-                lockVisibleTimeRangeOnResize: true, // Prevent auto-adjustment
+                rightOffset: 12, // Standard offset
                 tickMarkFormatter: (time: number, tickMarkType: number, locale: string) => {
-                    // ALWAYS return full date format (10 chars) for ALL timeframes
                     const date = new Date(time * 1000);
                     const year = date.getFullYear();
                     const month = String(date.getMonth() + 1).padStart(2, '0');
                     const day = String(date.getDate()).padStart(2, '0');
 
-                    // Date ticks: always full format
+                    // Always return full date for date ticks
                     if (tickMarkType < 3) {
                         return `${year}/${month}/${day}`;
                     }
-                    // Time ticks: hour:minute
+                    // Time format for time ticks
                     const hour = String(date.getHours()).padStart(2, '0');
                     const minute = String(date.getMinutes()).padStart(2, '0');
                     return `${hour}:${minute}`;
