@@ -248,6 +248,7 @@ export default function MainChart(props: MainChartProps) {
 
         chartRef.current = chart;
 
+
         const candleSeries = chart.addCandlestickSeries({
             upColor: "#00C853",
             downColor: "#FF3D00",
@@ -255,14 +256,13 @@ export default function MainChart(props: MainChartProps) {
             wickUpColor: "#00C853",
             wickDownColor: "#FF3D00",
             priceLineColor: "#FFD700",
-            crosshairMarkerVisible: false, // FORCE OFF MARKERS ON CANDLES
-        });
+        } as any); // Use 'as any' to allow flexible configuration
         seriesRef.current = candleSeries;
 
         // Bollinger Bands
-        const upper = chart.addLineSeries({ color: '#800080', lineWidth: 1, lastValueVisible: true, priceLineVisible: false, crosshairMarkerVisible: false });
-        const middle = chart.addLineSeries({ color: '#FF6666', lineWidth: 1, lastValueVisible: true, priceLineVisible: false, crosshairMarkerVisible: false });
-        const lower = chart.addLineSeries({ color: '#0000FF', lineWidth: 1, lastValueVisible: true, priceLineVisible: false, crosshairMarkerVisible: false });
+        const upper = chart.addLineSeries({ color: '#800080', lineWidth: 1, lastValueVisible: true, priceLineVisible: false, crosshairMarkerVisible: false } as any);
+        const middle = chart.addLineSeries({ color: '#FF6666', lineWidth: 1, lastValueVisible: true, priceLineVisible: false, crosshairMarkerVisible: false } as any);
+        const lower = chart.addLineSeries({ color: '#0000FF', lineWidth: 1, lastValueVisible: true, priceLineVisible: false, crosshairMarkerVisible: false } as any);
 
         upperRef.current = upper;
         middleRef.current = middle;
