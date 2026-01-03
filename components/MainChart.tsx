@@ -197,43 +197,35 @@ export default function MainChart(props: MainChartProps) {
                     const date = new Date(time * 1000);
 
                     // CRITICAL FIX: Read from ref to get the LATEST timeframe value
-                    // This avoids stale closures that cause flickering
                     const currentTimeframe = timeframeRef.current;
                     const isWeekly = currentTimeframe && currentTimeframe.toLowerCase().includes('w');
 
-                    // 周线模式：无论 tickMarkType 是什么，统一返回完整日期格式
-                    // 这确保了所有时间标签长度一致，避免跳动
+                    // Helper: Manual date formatting for absolute consistency
+                    const formatDateManual = (d: Date, includeYear: boolean = true): string => {
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        return includeYear ? `${year}/${month}/${day}` : `${month}/${day}`;
+                    };
+
+                    // 周线模式：强制所有标签使用完整格式 YYYY/MM/DD
+                    // 这确保了标签长度绝对一致（10个字符），避免任何跳动
                     if (isWeekly) {
-                        return date.toLocaleDateString('zh-CN', {
-                            timeZone: 'Asia/Shanghai',
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit'
-                        });
+                        return formatDateManual(date, true);
                     }
 
                     // 非周线模式：使用标准逻辑
                     if (tickMarkType === 0) {
-                        return date.toLocaleDateString('zh-CN', {
-                            timeZone: 'Asia/Shanghai',
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit'
-                        });
+                        return formatDateManual(date, true);
                     }
                     if (tickMarkType < 3) {
-                        return date.toLocaleDateString('zh-CN', {
-                            timeZone: 'Asia/Shanghai',
-                            month: '2-digit',
-                            day: '2-digit'
-                        });
+                        return formatDateManual(date, false);
                     }
-                    return date.toLocaleTimeString('zh-CN', {
-                        timeZone: 'Asia/Shanghai',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                    });
+
+                    // 时间格式化
+                    const hour = String(date.getHours()).padStart(2, '0');
+                    const minute = String(date.getMinutes()).padStart(2, '0');
+                    return `${hour}:${minute}`;
                 }
             },
             crosshair: {
