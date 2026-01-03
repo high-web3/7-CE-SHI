@@ -192,18 +192,21 @@ export default function MainChart(props: MainChartProps) {
             timeScale: {
                 timeVisible: true,
                 secondsVisible: false,
-                rightOffset: 70, // INCREASED BACK TO 70 TO ACCOMMODATE LONG LABELS
+                rightOffset: 200, // MASSIVE OFFSET: Ensure enough space for long date labels
+                fixRightEdge: true, // Lock right edge to prevent jumping
+                lockVisibleTimeRangeOnResize: true, // Prevent auto-adjustment
                 tickMarkFormatter: (time: number, tickMarkType: number, locale: string) => {
-                    // CRITICAL: Always return consistent format to prevent flickering
+                    // ALWAYS return full date format (10 chars) for ALL timeframes
                     const date = new Date(time * 1000);
                     const year = date.getFullYear();
                     const month = String(date.getMonth() + 1).padStart(2, '0');
                     const day = String(date.getDate()).padStart(2, '0');
 
-                    // ALWAYS return full date format (10 chars) for consistency
+                    // Date ticks: always full format
                     if (tickMarkType < 3) {
                         return `${year}/${month}/${day}`;
                     }
+                    // Time ticks: hour:minute
                     const hour = String(date.getHours()).padStart(2, '0');
                     const minute = String(date.getMinutes()).padStart(2, '0');
                     return `${hour}:${minute}`;
@@ -282,56 +285,9 @@ export default function MainChart(props: MainChartProps) {
         };
     }, [updateOverlay]);
 
-    // 1.5 Dynamic tickMarkFormatter Update - CRITICAL FIX FOR WEEKLY FLICKERING
+    // 1.5 Update timeframeRef (keep ref in sync, but no dynamic formatter changes)
     useEffect(() => {
-        if (!chartRef.current) return;
-
-        // Update the ref
         timeframeRef.current = timeframe;
-
-        // Check if it's weekly mode
-        const isWeekly = timeframe && timeframe.toLowerCase().includes('w');
-
-        // Helper: Manual date formatting for absolute consistency
-        const formatDateManual = (d: Date, includeYear: boolean = true): string => {
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return includeYear ? `${year}/${month}/${day}` : `${month}/${day}`;
-        };
-
-        // FORCE CHART TO USE NEW FORMATTER AND RIGHT OFFSET
-        chartRef.current.applyOptions({
-            timeScale: {
-                rightOffset: isWeekly ? 200 : 12, // SUPER AGGRESSIVE: Massive space for weekly labels
-                fixRightEdge: isWeekly, // Lock right edge in weekly mode
-                lockVisibleTimeRangeOnResize: isWeekly, // Prevent auto-adjustment on resize
-                tickMarkFormatter: (time: number, tickMarkType: number, locale: string) => {
-                    const date = new Date(time * 1000);
-
-                    // 周线模式：强制所有标签使用完整格式 YYYY/MM/DD
-                    if (isWeekly) {
-                        const year = date.getFullYear();
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const day = String(date.getDate()).padStart(2, '0');
-                        return `${year}/${month}/${day}`;
-                    }
-
-                    // 非周线模式：使用标准逻辑
-                    if (tickMarkType === 0) {
-                        return formatDateManual(date, true);
-                    }
-                    if (tickMarkType < 3) {
-                        return formatDateManual(date, false);
-                    }
-
-                    // 时间格式化
-                    const hour = String(date.getHours()).padStart(2, '0');
-                    const minute = String(date.getMinutes()).padStart(2, '0');
-                    return `${hour}:${minute}`;
-                }
-            }
-        });
     }, [timeframe]);
 
     // 2. Load Data
