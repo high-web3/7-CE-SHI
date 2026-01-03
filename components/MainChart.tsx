@@ -194,35 +194,18 @@ export default function MainChart(props: MainChartProps) {
                 secondsVisible: false,
                 rightOffset: 70, // INCREASED BACK TO 70 TO ACCOMMODATE LONG LABELS
                 tickMarkFormatter: (time: number, tickMarkType: number, locale: string) => {
+                    // Simple placeholder formatter - will be overridden by useEffect
                     const date = new Date(time * 1000);
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
 
-                    // CRITICAL FIX: Read from ref to get the LATEST timeframe value
-                    const currentTimeframe = timeframeRef.current;
-                    const isWeekly = currentTimeframe && currentTimeframe.toLowerCase().includes('w');
-
-                    // Helper: Manual date formatting for absolute consistency
-                    const formatDateManual = (d: Date, includeYear: boolean = true): string => {
-                        const year = d.getFullYear();
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        return includeYear ? `${year}/${month}/${day}` : `${month}/${day}`;
-                    };
-
-                    // 周线模式：强制所有标签使用完整格式 YYYY/MM/DD
-                    // 这确保了标签长度绝对一致（10个字符），避免任何跳动
-                    if (isWeekly) {
-                        return formatDateManual(date, true);
-                    }
-
-                    // 非周线模式：使用标准逻辑
                     if (tickMarkType === 0) {
-                        return formatDateManual(date, true);
+                        return `${year}/${month}/${day}`;
                     }
                     if (tickMarkType < 3) {
-                        return formatDateManual(date, false);
+                        return `${month}/${day}`;
                     }
-
-                    // 时间格式化
                     const hour = String(date.getHours()).padStart(2, '0');
                     const minute = String(date.getMinutes()).padStart(2, '0');
                     return `${hour}:${minute}`;
@@ -301,9 +284,53 @@ export default function MainChart(props: MainChartProps) {
         };
     }, [updateOverlay]);
 
-    // 1.5 Keep timeframeRef in sync with timeframe prop
+    // 1.5 Dynamic tickMarkFormatter Update - CRITICAL FIX FOR WEEKLY FLICKERING
     useEffect(() => {
+        if (!chartRef.current) return;
+
+        // Update the ref
         timeframeRef.current = timeframe;
+
+        // Check if it's weekly mode
+        const isWeekly = timeframe && timeframe.toLowerCase().includes('w');
+
+        // Helper: Manual date formatting for absolute consistency
+        const formatDateManual = (d: Date, includeYear: boolean = true): string => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return includeYear ? `${year}/${month}/${day}` : `${month}/${day}`;
+        };
+
+        // FORCE CHART TO USE NEW FORMATTER
+        chartRef.current.applyOptions({
+            timeScale: {
+                tickMarkFormatter: (time: number, tickMarkType: number, locale: string) => {
+                    const date = new Date(time * 1000);
+
+                    // 周线模式：强制所有标签使用完整格式 YYYY/MM/DD
+                    if (isWeekly) {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}/${month}/${day}`;
+                    }
+
+                    // 非周线模式：使用标准逻辑
+                    if (tickMarkType === 0) {
+                        return formatDateManual(date, true);
+                    }
+                    if (tickMarkType < 3) {
+                        return formatDateManual(date, false);
+                    }
+
+                    // 时间格式化
+                    const hour = String(date.getHours()).padStart(2, '0');
+                    const minute = String(date.getMinutes()).padStart(2, '0');
+                    return `${hour}:${minute}`;
+                }
+            }
+        });
     }, [timeframe]);
 
     // 2. Load Data
