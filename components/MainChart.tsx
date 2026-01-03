@@ -194,17 +194,15 @@ export default function MainChart(props: MainChartProps) {
                 secondsVisible: false,
                 rightOffset: 70, // INCREASED BACK TO 70 TO ACCOMMODATE LONG LABELS
                 tickMarkFormatter: (time: number, tickMarkType: number, locale: string) => {
-                    // Simple placeholder formatter - will be overridden by useEffect
+                    // CRITICAL: Always return consistent format to prevent flickering
                     const date = new Date(time * 1000);
                     const year = date.getFullYear();
                     const month = String(date.getMonth() + 1).padStart(2, '0');
                     const day = String(date.getDate()).padStart(2, '0');
 
-                    if (tickMarkType === 0) {
-                        return `${year}/${month}/${day}`;
-                    }
+                    // ALWAYS return full date format (10 chars) for consistency
                     if (tickMarkType < 3) {
-                        return `${month}/${day}`;
+                        return `${year}/${month}/${day}`;
                     }
                     const hour = String(date.getHours()).padStart(2, '0');
                     const minute = String(date.getMinutes()).padStart(2, '0');
@@ -305,7 +303,9 @@ export default function MainChart(props: MainChartProps) {
         // FORCE CHART TO USE NEW FORMATTER AND RIGHT OFFSET
         chartRef.current.applyOptions({
             timeScale: {
-                rightOffset: isWeekly ? 150 : 12, // CRITICAL: More space for long date labels in weekly mode
+                rightOffset: isWeekly ? 200 : 12, // SUPER AGGRESSIVE: Massive space for weekly labels
+                fixRightEdge: isWeekly, // Lock right edge in weekly mode
+                lockVisibleTimeRangeOnResize: isWeekly, // Prevent auto-adjustment on resize
                 tickMarkFormatter: (time: number, tickMarkType: number, locale: string) => {
                     const date = new Date(time * 1000);
 
