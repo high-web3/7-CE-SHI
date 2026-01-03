@@ -281,6 +281,8 @@ export default function MainChart(props: MainChartProps) {
                     rightOffset: 12,
                     barSpacing: 6,
                     minBarSpacing: 0.5,
+                    shiftVisibleRangeOnNewBar: false,
+                    allowShiftVisibleRangeOnWhitespaceReplacement: false,
                     tickMarkFormatter: (time: number, tickMarkType: number, locale: string) => {
                         const date = new Date(time * 1000);
                         const year = date.getFullYear();
