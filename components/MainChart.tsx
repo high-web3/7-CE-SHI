@@ -302,9 +302,10 @@ export default function MainChart(props: MainChartProps) {
             return includeYear ? `${year}/${month}/${day}` : `${month}/${day}`;
         };
 
-        // FORCE CHART TO USE NEW FORMATTER
+        // FORCE CHART TO USE NEW FORMATTER AND RIGHT OFFSET
         chartRef.current.applyOptions({
             timeScale: {
+                rightOffset: isWeekly ? 150 : 12, // CRITICAL: More space for long date labels in weekly mode
                 tickMarkFormatter: (time: number, tickMarkType: number, locale: string) => {
                     const date = new Date(time * 1000);
 
