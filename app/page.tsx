@@ -133,7 +133,7 @@ export default function Home() {
 
                 {/* RIGHT COL: Controls (Right Aligned) */}
                 <div className="flex justify-end pr-6 z-10">
-                    <div className="flex flex-col items-end space-y-2 border-l-2 border-gray-100 pl-8 py-1">
+                    <div className="flex flex-col items-end space-y-2 pl-8 py-1">
                         {/* Funding Rate */}
                         <div className="flex flex-col items-end w-full">
                             <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none mb-1">Funding Rate</span>
