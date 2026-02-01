@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 // Binance Public API Base URL
-const BASE_URL = 'https://api.binance.com/api/v3';
+const SPOT_URL = 'https://api.binance.com/api/v3';
+const FUTURES_URL = 'https://fapi.binance.com/fapi/v1';
+
+const isFuturesOnly = (symbol: string) => ['XAG'].includes(symbol.toUpperCase());
 
 export type Kline = {
     time: number;
@@ -26,14 +29,17 @@ export const INTERVALS = {
     '1w': '1w',
 };
 
-export const SUPPORTED_COINS = ['BTC', 'ETH', 'SOL', 'LTC', 'DOGE', 'ZEC', 'BNB'];
+export const SUPPORTED_COINS = ['BTC', 'ETH', 'SOL', 'LTC', 'DOGE', 'ZEC', 'BNB', 'DASH', 'XAG'];
 
 /**
  * Fetch K-Line data (Candlesticks)
  */
 export async function fetchKlines(symbol: string, interval: string, limit: number = 100): Promise<Kline[]> {
     try {
-        const response = await axios.get(`${BASE_URL}/klines`, {
+        const isFut = isFuturesOnly(symbol);
+        const baseUrl = isFut ? FUTURES_URL : SPOT_URL;
+
+        const response = await axios.get(`${baseUrl}/klines`, {
             params: {
                 symbol: `${symbol.toUpperCase()}USDT`,
                 interval: interval,
@@ -62,7 +68,10 @@ export async function fetchKlines(symbol: string, interval: string, limit: numbe
  */
 export async function fetchTicker(symbol: string): Promise<number> {
     try {
-        const response = await axios.get(`${BASE_URL}/ticker/price`, {
+        const isFut = isFuturesOnly(symbol);
+        const baseUrl = isFut ? FUTURES_URL : SPOT_URL;
+        // Futures API uses /ticker/price just like spot, or /ticker/price?symbol=...
+        const response = await axios.get(`${baseUrl}/ticker/price`, {
             params: { symbol: `${symbol.toUpperCase()}USDT` }
         });
         return parseFloat(response.data.price);
@@ -93,7 +102,9 @@ export async function fetchFundingRate(symbol: string): Promise<string> {
  */
 export async function fetch24hStats(symbol: string): Promise<number> {
     try {
-        const response = await axios.get(`${BASE_URL}/ticker/24hr`, {
+        const isFut = isFuturesOnly(symbol);
+        const baseUrl = isFut ? FUTURES_URL : SPOT_URL;
+        const response = await axios.get(`${baseUrl}/ticker/24hr`, {
             params: { symbol: `${symbol.toUpperCase()}USDT` }
         });
         return parseFloat(response.data.priceChangePercent);
