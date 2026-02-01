@@ -121,7 +121,7 @@ export default function Home() {
                     <div className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">Current Price</div>
                     <div className="flex items-center justify-center">
                         {/* Orange Price - Reduced to text-lg on mobile (was 3xl) */}
-                        <span className="text-lg md:text-6xl font-mono font-bold text-orange-500 tracking-tighter">
+                        <span className="text-lg md:text-5xl font-mono font-bold text-orange-500 tracking-tighter">
                             ${tickerPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         {/* 24h Change */}
