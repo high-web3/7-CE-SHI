@@ -53,6 +53,7 @@ export default function MainChart(props: MainChartProps) {
         if (unit === 'h') return val * 3600;
         if (unit === 'd') return val * 86400;
         if (unit === 'w') return val * 604800;
+        if (unit === 'M') return val * 2592000; // 30 days approx
         return 60; // default 1m
     };
 
@@ -341,40 +342,44 @@ export default function MainChart(props: MainChartProps) {
         lowerRef.current.setData(bbData.map(d => ({ time: d.time as any, value: d.lower })));
     }, [bbData]);
 
-    const getIntervalSeconds = (tf: string) => {
-        const unit = tf.slice(-1);
-        const val = parseInt(tf);
-        if (unit === 'm') return val * 60;
-        if (unit === 'h') return val * 3600;
-        if (unit === 'd') return val * 86400;
-        if (unit === 'w') return val * 604800;
-        if (unit === 'M') return val * 2592000; // 30 days approx
-        return 60; // default 1m
-    };
-
-    // ... (omitted updateOverlay helper to keep context clear if not changing, but here I am replacing the block) ...
-    // Actually I can't skip lines in ReplacementContent easily if I'm replacing a huge chunk.
-    // Minimizing change scope: I will replace getIntervalSeconds separately if needed, or just focus on the useEffect block if I can inline the fix.
-    // Let's replace the whole useEffect block for #4 Real-time Update.
-
     // 4. Real-time Update
     useEffect(() => {
         if (!seriesRef.current || !currentPrice || !liveCandleRef.current) return;
 
-        // For long timeframes (Week/Month), client-side timestamp calculation is error-prone 
-        // (alignment issues with exchange).
-        // Solution: For w/M, do NOT create new bars client-side. Just update the existing bar.
-        // Let the polling (fetchKlines) handle the actual new bar creation.
+        // For long timeframes (Week/Month), client-side timestamp calculation is error-prone.
+        // We rely on API polling. To prevent "Jumping" or "Rewriting History":
+        // 1. Do NOT create new bars client-side.
+        // 2. Do NOT update the current bar if it belongs to a past period (wait for API).
+
         const isLongTimeframe = timeframe.endsWith('w') || timeframe.endsWith('M');
+        const intervalSec = getIntervalSeconds(timeframe);
+        const nowSec = Math.floor(Date.now() / 1000);
 
         let nextCandle: any;
 
         if (isLongTimeframe) {
-            // Simple update of current candle
             const prev = liveCandleRef.current;
+
+            // Check if we have moved past the current candle's duration
+            // (buffer of +3600 seconds (1hr) to be safe for weekly/monthly variations? 
+            //  Actually, if it's 3 days late, it's definitely a new bar. 
+            //  Let's allow updating if we are within interval + 10%.
+            //  Simplest valid check: if nowSec > prev.time + intervalSec, stop updating.
+            //  For Month, intervalSec is 30 days. Some months are 31. So we shouldn't be too strict.
+            //  Let's accept updates up to timestamp + interval * 1.5 to cover irregular month lengths,
+            //  while firmly rejecting things that are obviously the NEXT candle.
+
+            // Actually, the main issue user saw was "Jumping". This happens when prev.time is OLD, but we update it.
+            // If we are strictly in "Wait for API" mode, we can just skip update if we think it's new.
+
+            if (nowSec > prev.time + intervalSec * 1.1) {
+                // Likely in a new period waiting for API. Do nothing.
+                return;
+            }
+
+            // Otherwise, update current
             nextCandle = {
                 ...prev,
-                // Ensure time doesn't jump
                 time: prev.time as any,
                 close: Number(currentPrice),
                 high: Math.max(prev.high, Number(currentPrice)),
@@ -382,12 +387,10 @@ export default function MainChart(props: MainChartProps) {
             };
         } else {
             // Standard logic for short timeframes (m/h/d)
-            const intervalSec = getIntervalSeconds(timeframe);
-            const nowSec = Math.floor(Date.now() / 1000);
             const currentBarTime = Math.floor(nowSec / intervalSec) * intervalSec;
 
             if (currentBarTime > liveCandleRef.current.time) {
-                // Determine open price for new bar (use close of prev)
+                // New bar
                 const openPrice = liveCandleRef.current.close;
                 nextCandle = {
                     time: currentBarTime as any,
@@ -397,6 +400,7 @@ export default function MainChart(props: MainChartProps) {
                     close: Number(currentPrice)
                 };
             } else {
+                // Update existing
                 const prev = liveCandleRef.current;
                 nextCandle = {
                     ...prev,
