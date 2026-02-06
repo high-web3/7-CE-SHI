@@ -341,19 +341,73 @@ export default function MainChart(props: MainChartProps) {
         lowerRef.current.setData(bbData.map(d => ({ time: d.time as any, value: d.lower })));
     }, [bbData]);
 
+    const getIntervalSeconds = (tf: string) => {
+        const unit = tf.slice(-1);
+        const val = parseInt(tf);
+        if (unit === 'm') return val * 60;
+        if (unit === 'h') return val * 3600;
+        if (unit === 'd') return val * 86400;
+        if (unit === 'w') return val * 604800;
+        if (unit === 'M') return val * 2592000; // 30 days approx
+        return 60; // default 1m
+    };
+
+    // ... (omitted updateOverlay helper to keep context clear if not changing, but here I am replacing the block) ...
+    // Actually I can't skip lines in ReplacementContent easily if I'm replacing a huge chunk.
+    // Minimizing change scope: I will replace getIntervalSeconds separately if needed, or just focus on the useEffect block if I can inline the fix.
+    // Let's replace the whole useEffect block for #4 Real-time Update.
+
     // 4. Real-time Update
     useEffect(() => {
         if (!seriesRef.current || !currentPrice || !liveCandleRef.current) return;
-        const intervalSec = getIntervalSeconds(timeframe);
-        const nowSec = Math.floor(Date.now() / 1000);
-        const currentBarTime = Math.floor(nowSec / intervalSec) * intervalSec;
+
+        // For long timeframes (Week/Month), client-side timestamp calculation is error-prone 
+        // (alignment issues with exchange).
+        // Solution: For w/M, do NOT create new bars client-side. Just update the existing bar.
+        // Let the polling (fetchKlines) handle the actual new bar creation.
+        const isLongTimeframe = timeframe.endsWith('w') || timeframe.endsWith('M');
+
         let nextCandle: any;
-        if (currentBarTime > liveCandleRef.current.time) {
-            nextCandle = { time: currentBarTime as any, open: Number(currentPrice), high: Number(currentPrice), low: Number(currentPrice), close: Number(currentPrice) };
-        } else {
+
+        if (isLongTimeframe) {
+            // Simple update of current candle
             const prev = liveCandleRef.current;
-            nextCandle = { ...prev, time: prev.time as any, close: Number(currentPrice), high: Math.max(prev.high, Number(currentPrice)), low: Math.min(prev.low, Number(currentPrice)) };
+            nextCandle = {
+                ...prev,
+                // Ensure time doesn't jump
+                time: prev.time as any,
+                close: Number(currentPrice),
+                high: Math.max(prev.high, Number(currentPrice)),
+                low: Math.min(prev.low, Number(currentPrice))
+            };
+        } else {
+            // Standard logic for short timeframes (m/h/d)
+            const intervalSec = getIntervalSeconds(timeframe);
+            const nowSec = Math.floor(Date.now() / 1000);
+            const currentBarTime = Math.floor(nowSec / intervalSec) * intervalSec;
+
+            if (currentBarTime > liveCandleRef.current.time) {
+                // Determine open price for new bar (use close of prev)
+                const openPrice = liveCandleRef.current.close;
+                nextCandle = {
+                    time: currentBarTime as any,
+                    open: openPrice,
+                    high: Number(currentPrice),
+                    low: Number(currentPrice),
+                    close: Number(currentPrice)
+                };
+            } else {
+                const prev = liveCandleRef.current;
+                nextCandle = {
+                    ...prev,
+                    time: prev.time as any,
+                    close: Number(currentPrice),
+                    high: Math.max(prev.high, Number(currentPrice)),
+                    low: Math.min(prev.low, Number(currentPrice))
+                };
+            }
         }
+
         seriesRef.current.update(nextCandle);
         liveCandleRef.current = nextCandle;
         if (!isHoveringRef.current) setCurrentCandle(nextCandle);
